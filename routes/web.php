@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Object3dController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,6 +24,7 @@ Route::middleware(['auth', 'teacher'])
     ->name('admin.')
     ->group(function () {
         Route::resource('activities', ActivityController::class);
+        Route::resource('objects3d', Object3dController::class)->except('show');
     });
 
 require __DIR__.'/auth.php';

@@ -24,6 +24,12 @@
                 </x-nav-link>
             @endif
 
+            @if (auth()->user()->isTeacher())
+                <x-nav-link :href="route('admin.objects3d.index')" :active="request()->routeIs('admin.objects3d.*')">
+                    Objetos 3D
+                </x-nav-link>
+            @endif
+
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ml-6">
                 <x-dropdown align="right" width="48">
@@ -84,6 +90,13 @@
             </x-responsive-nav-link>
         @endif
 
+        @if (auth()->user()->isTeacher())
+            <x-responsive-nav-link :href="route('admin.objects3d.index')" :active="request()->routeIs('admin.objects3d.*')">
+                Objetos 3D
+            </x-responsive-nav-link>
+        @endif
+
+        
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">
