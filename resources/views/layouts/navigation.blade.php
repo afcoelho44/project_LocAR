@@ -18,6 +18,12 @@
                 </div>
             </div>
 
+            @if (auth()->user()->isTeacher())
+                <x-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">
+                    Atividades
+                </x-nav-link>
+            @endif
+
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ml-6">
                 <x-dropdown align="right" width="48">
@@ -71,6 +77,12 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
         </div>
+
+        @if (auth()->user()->isTeacher())
+            <x-responsive-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">
+                Atividades
+            </x-responsive-nav-link>
+        @endif
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
