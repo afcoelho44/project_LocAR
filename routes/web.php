@@ -43,6 +43,8 @@ Route::middleware(['auth', 'teacher'])
         Route::get('activities', [PlayController::class, 'index'])->name('index');
         Route::post('activities/{activity}/start', [PlayController::class, 'start'])->name('start');
         Route::get('participations/{participation}', [PlayController::class, 'show'])->name('show');
+        Route::get('participations/{participation}/ar', [PlayController::class, 'ar'])->name('ar');
+        Route::get('participations/{participation}/state', [PlayController::class, 'state'])->name('state');
     });
     
 require __DIR__.'/auth.php';

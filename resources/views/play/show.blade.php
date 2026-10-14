@@ -8,28 +8,14 @@
 
     <div class="py-8">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-4">
-
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <h3 class="font-semibold">Pergunta</h3>
-                <p class="mt-2 text-gray-700">{{ $question->description }}</p>
-
-                <ul class="mt-4 space-y-1 text-sm">
-                    @foreach ($question->answers as $answer)
-                        <li><span class="font-semibold">{{ $answer->alternative }})</span> {{ $answer->description }}</li>
-                    @endforeach
-                </ul>
+            <div class="bg-white shadow-sm sm:rounded-lg p-8 text-center">
+                <p class="text-gray-700">Vá até o ponto indicado e aponte a câmera para encontrar a pista.</p>
+                <p class="mt-2 text-xs text-gray-500">Use o celular, com GPS e câmera liberados.</p>
+                <a href="{{ route('play.ar', $participation) }}"
+                   class="mt-6 inline-block px-6 py-3 bg-gray-800 text-white text-sm uppercase rounded-md">
+                    Abrir modo RA
+                </a>
             </div>
-
-            {{-- Área temporária: na Etapa 6 vira a cena de RA --}}
-            <div class="bg-yellow-50 border border-yellow-200 sm:rounded-lg p-6 text-sm text-yellow-900">
-                <p class="font-semibold">Área de RA (Etapa 6)</p>
-                <p class="mt-1">Destino: {{ $question->lat }}, {{ $question->lng }} · raio {{ $question->radius }} m</p>
-                <p>Objeto 3D: {{ $question->object3d?->name ?? 'nenhum' }}</p>
-                @if ($question->object3d)
-                    <p class="break-all">Arquivo: {{ $question->object3d->url }}</p>
-                @endif
-            </div>
-
             <a href="{{ route('play.index') }}" class="text-sm text-gray-600 underline">Voltar às atividades</a>
         </div>
     </div>
