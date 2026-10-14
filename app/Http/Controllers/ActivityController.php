@@ -37,7 +37,7 @@ class ActivityController extends Controller
     public function show(Activity $activity)
     {
         $this->authorizeOwner($activity);
-        $activity->load('questions');
+        $activity->load('questions.object3d', 'questions.answers');
 
         return view('admin.activities.show', compact('activity'));
     }

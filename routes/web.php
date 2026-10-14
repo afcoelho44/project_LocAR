@@ -19,11 +19,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+use App\Http\Controllers\QuestionController;
+
 Route::middleware(['auth', 'teacher'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::resource('activities', ActivityController::class);
+        Route::resource('activities.questions', QuestionController::class)
+            ->except(['index', 'show'])
+            ->shallow();
         Route::resource('objects3d', Object3dController::class)->except('show');
     });
 
