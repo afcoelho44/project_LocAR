@@ -17,7 +17,9 @@
                     </x-nav-link>
                 </div>
             </div>
-
+                    <x-nav-link :href="route('play.index')" :active="request()->routeIs('play.*')">
+                        Caça ao tesouro
+                    </x-nav-link>
             @if (auth()->user()->isTeacher())
                 <x-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">
                     Atividades
@@ -83,6 +85,10 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
         </div>
+            
+            <x-responsive-nav-link :href="route('play.index')" :active="request()->routeIs('play.*')">
+                Caça ao tesouro
+            </x-responsive-nav-link>
 
         @if (auth()->user()->isTeacher())
             <x-responsive-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">

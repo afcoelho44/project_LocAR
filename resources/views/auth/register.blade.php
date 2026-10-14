@@ -22,6 +22,15 @@
             <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
+        <!-- User Type -->
+        <div class="mt-4">
+            <x-input-label for="type" value="Perfil" />
+            <select id="type" name="type" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm" required>
+                <option value="student" @selected(old('type', 'student') === 'student')>Aluno</option>
+                <option value="teacher" @selected(old('type') === 'teacher')>Professor</option>
+            </select>
+            <x-input-error :messages="$errors->get('type')" class="mt-2" />
+        </div>
 
         <!-- Password -->
         <div class="mt-4">
