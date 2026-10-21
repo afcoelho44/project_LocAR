@@ -62,7 +62,7 @@ renderer.setAnimationLoop(() => {
 });
 
 // ---------- objeto 3D ----------
-const TARGET_SIZE = 10; // maior dimensão do modelo, em metros
+const TARGET_SIZE = 2; // maior dimensão do modelo, em metros
 
 async function buildObject(url) {
     const group = new THREE.Group();
@@ -132,7 +132,7 @@ async function main() {
         const { latitude, longitude, accuracy } = c;
         const dist = distanceMeters(latitude, longitude, q.lat, q.lng);
 
-        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m`);
+        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m · obj ${TARGET_SIZE} m`);
 
         if (!placed) {
             placed = true;
