@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { getGirou, pedirPermissao } from './sensores.js';
+import { getGirou, pedirPermissao, iniciarColeta, getBufferColeta } from './sensores.js';
 
 const root = document.getElementById('ar-root');
 const el = {
@@ -14,14 +14,44 @@ const el = {
 
 // ?fake=far  -> simula GPS a ~33 m do ponto (teste no computador)
 // ?fake=here -> simula GPS em cima do ponto
-const fake = new URLSearchParams(location.search).get('fake');
+const params = new URLSearchParams(location.search);
+const fake = params.get('fake');
+
+// ?coleta=1 -> grava as amostras dos sensores para o dataset quente/frio
+// (nunca junto com fake: GPS falso estragaria o dataset)
+const coleta = params.get('coleta') === '1' && !fake;
+const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+// a pergunta chega pelo fetch do main(); o clique pode vir antes ou depois
+let resolverPergunta;
+const perguntaPronta = new Promise((r) => (resolverPergunta = r));
 
 const btn = document.getElementById('btn-sensores');
 btn.addEventListener('click', async () => {
-    // 3) o que roda a cada clique:
     btn.textContent = 'clicou...';
     const ok = await pedirPermissao();
-    btn.textContent = 'resultado: ' + ok;
+    if (!ok) {
+        btn.textContent = 'permissão negada';
+        return;
+    }
+
+    if (!coleta) {
+        btn.textContent = 'sensores ok';
+        return;
+    }
+
+    btn.textContent = 'aguardando pergunta...';
+    const q = await perguntaPronta;
+    iniciarColeta({
+        url: root.dataset.samplesUrl,
+        csrf,
+        questionId: q.id,
+        alvo: { lat: q.lat, lng: q.lng },
+    });
+    btn.disabled = true;
+    setInterval(() => {
+        btn.textContent = `coletando · ${getBufferColeta().length} na fila`;
+    }, 1000);
 });
 
 
@@ -121,6 +151,7 @@ async function main() {
     if (state.finished) return setStatus('Percurso concluído!');
 
     const q = state.question;
+    resolverPergunta(q);
     el.step.textContent = `Etapa ${state.number} de ${state.total}`;
 
     let placed = false;
