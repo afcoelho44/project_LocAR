@@ -39,6 +39,12 @@
             <a href="{{ route('play.show', $participation, false) }}">Sair</a>
         </div>
 
+        <button id="btn-sensores" type="button"
+        style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:20;
+            padding:14px 24px; font-size:16px; border-radius:8px; border:0; background:#2563eb; color:#fff;">
+            Ativar sensores
+        </button>
+
         <div id="panel">
             <h3 id="q-text"></h3>
             <div id="q-answers"></div>

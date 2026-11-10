@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { getGirou, pedirPermissao } from './sensores.js';
 
 const root = document.getElementById('ar-root');
 const el = {
@@ -14,6 +15,15 @@ const el = {
 // ?fake=far  -> simula GPS a ~33 m do ponto (teste no computador)
 // ?fake=here -> simula GPS em cima do ponto
 const fake = new URLSearchParams(location.search).get('fake');
+
+const btn = document.getElementById('btn-sensores');
+btn.addEventListener('click', async () => {
+    // 3) o que roda a cada clique:
+    btn.textContent = 'clicou...';
+    const ok = await pedirPermissao();
+    btn.textContent = 'resultado: ' + ok;
+});
+
 
 const setStatus = (t) => (el.status.textContent = t);
 
@@ -49,7 +59,8 @@ window.addEventListener('resize', () => {
 // ---------- LocAR ----------
 const locar = new LocAR.LocationBased(scene, camera);
 const cam = new LocAR.Webcam({ video: { facingMode: 'environment' } }, null);
-const controls = new LocAR.DeviceOrientationControls(camera);
+const controls = new LocAR.DeviceOrientationControls(camera, { enablePermissionDialog: false });
+
 
 cam.on('webcamstarted', (ev) => { scene.background = ev.texture; });
 cam.on('webcamerror', (err) => setStatus(`Erro na câmera: ${err.message ?? err.code}`));
@@ -131,8 +142,8 @@ async function main() {
         }
         const { latitude, longitude, accuracy } = c;
         const dist = distanceMeters(latitude, longitude, q.lat, q.lng);
-
-        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m · obj ${TARGET_SIZE} m`);
+        const g = getGirou();
+        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m · obj ${TARGET_SIZE} m · girou ${Math.round(g)}°`);
 
         if (!placed) {
             placed = true;
@@ -170,3 +181,4 @@ main().catch((e) => {
     console.error(e);
     setStatus('Erro inesperado. Veja o console.');
 });
+
