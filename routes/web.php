@@ -6,6 +6,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Object3dController;
 use App\Http\Controllers\PlayController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\SensorSampleController;
 
 
 Route::get('/', function () {
@@ -45,6 +46,7 @@ Route::middleware(['auth', 'teacher'])
         Route::get('participations/{participation}', [PlayController::class, 'show'])->name('show');
         Route::get('participations/{participation}/ar', [PlayController::class, 'ar'])->name('ar');
         Route::get('participations/{participation}/state', [PlayController::class, 'state'])->name('state');
+        Route::post('participations/{participation}/samples', [SensorSampleController::class, 'store'])->name('samples.store');
     });
     
 require __DIR__.'/auth.php';

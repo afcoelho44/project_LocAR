@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ $participation->activity->name }} · RA</title>
     @vite('resources/js/ar.js')
@@ -28,7 +29,9 @@
     </style>
 </head>
 <body>
-    <div id="ar-root" data-state-url="{{ route('play.state', $participation, false) }}">
+    <div id="ar-root"
+         data-state-url="{{ route('play.state', $participation, false) }}"
+         data-samples-url="{{ route('play.samples.store', $participation, false) }}">
         <canvas id="ar-canvas"></canvas>
 
         <div id="hud">
