@@ -21,6 +21,13 @@
             padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
             background: #fff; border-radius: 16px 16px 0 0; max-height: 60%; overflow-y: auto;
         }
+        #dica {
+            position: fixed; left: 12px; right: 12px; z-index: 10; display: none;
+            top: calc(env(safe-area-inset-top, 0px) + 64px);
+            padding: 10px 14px; border-radius: 10px; color: #fff;
+            font-size: 16px; font-weight: 600; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.35); transition: background .4s;
+        }
         #panel h3 { margin: 0 0 8px; font-size: 16px; }
         #panel button {
             display: block; width: 100%; text-align: left; margin-top: 8px; padding: 12px;
@@ -48,6 +55,7 @@
             Ativar sensores
         </button>
 
+        <div id="dica"></div>
         <div id="panel">
             <h3 id="q-text"></h3>
             <div id="q-answers"></div>

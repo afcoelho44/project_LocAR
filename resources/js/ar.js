@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getGirou, pedirPermissao, iniciarColeta, getBufferColeta } from './sensores.js';
+import { registrarPosicao, calcularDica, mostrarDica, esconderDica } from './dica-mock.js';
+import { iniciarCaminhada } from './fake-walk.js';
 
 const root = document.getElementById('ar-root');
 const el = {
@@ -10,10 +12,12 @@ const el = {
     panel: document.getElementById('panel'),
     qText: document.getElementById('q-text'),
     qAnswers: document.getElementById('q-answers'),
+    dica: document.getElementById('dica'),
 };
 
 // ?fake=far  -> simula GPS a ~33 m do ponto (teste no computador)
 // ?fake=here -> simula GPS em cima do ponto
+// ?fake=walk -> simula uma caminhada até o ponto (demonstra quente/frio/sem dica)
 const params = new URLSearchParams(location.search);
 const fake = params.get('fake');
 
@@ -160,13 +164,14 @@ async function main() {
     locar.on('gpserror', (code) => setStatus(`Erro de GPS (código ${code}). Libere a localização.`));
 
     let fakePos = null;
-    if (fake) {
-        const offset = fake === 'here' ? 0 : -0.0003; // ~33 m ao norte
+    if (fake && fake !== 'walk') {
+        const offset = fake === 'here' ? 0 : -0.0003; // ~33 m ao sul
         fakePos = { latitude: q.lat + offset, longitude: q.lng, accuracy: 0 };
     }
 
     locar.on('gpsupdate', async (pos) => {
-        const c = extractCoords(pos) ?? fakePos;
+        // no modo fake a posição "verdadeira" (com accuracy) é a fakePos
+        const c = fake ? fakePos : extractCoords(pos);
         if (!c) {
             console.warn('gpsupdate com formato inesperado:', pos);
             return;
@@ -183,13 +188,25 @@ async function main() {
             locar.add(obj, q.lng, q.lat, -1);
         }
 
+        // dica quente/frio (MOCK da IA — trocar por POST /prever depois)
+        if (!unlocked) {
+            registrarPosicao(dist, accuracy ?? Infinity);
+            mostrarDica(el.dica, calcularDica());
+        }
+
         if (!unlocked && dist <= q.radius) {
             unlocked = true;
+            esconderDica(el.dica);
             showQuestion(q);
         }
     });
 
-    if (fake) {
+    if (fake === 'walk') {
+        iniciarCaminhada({ lat: q.lat, lng: q.lng }, (p) => {
+            fakePos = p;
+            locar.fakeGps(p.longitude, p.latitude, null, p.accuracy);
+        });
+    } else if (fake) {
         locar.fakeGps(fakePos.longitude, fakePos.latitude);
     } else {
         locar.startGps();
