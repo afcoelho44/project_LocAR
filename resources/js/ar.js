@@ -25,19 +25,42 @@ let resolverPergunta;
 const perguntaPronta = new Promise((r) => (resolverPergunta = r));
 
 const btn = document.getElementById('btn-sensores');
+
+// Android não pede permissão para os sensores: sem coleta, o botão nem precisa aparecer
+const precisaPermissao =
+    typeof DeviceMotionEvent?.requestPermission === 'function' ||
+    typeof DeviceOrientationEvent?.requestPermission === 'function';
+if (!precisaPermissao && !coleta) {
+    btn.remove();
+}
+
+// depois de usado, o botão vira um selo discreto no canto (só no modo coleta)
+function virarSelo() {
+    btn.disabled = true;
+    Object.assign(btn.style, {
+        top: 'calc(env(safe-area-inset-top, 0px) + 56px)', bottom: 'auto',
+        left: 'auto', right: '8px', transform: 'none',
+        padding: '4px 10px', fontSize: '12px', borderRadius: '999px',
+        background: 'rgba(0,0,0,.55)', opacity: '1',
+    });
+}
+
 btn.addEventListener('click', async () => {
-    btn.textContent = 'clicou...';
+    btn.disabled = true;
+    btn.textContent = 'Ativando...';
     const ok = await pedirPermissao();
     if (!ok) {
-        btn.textContent = 'permissão negada';
+        btn.disabled = false;
+        btn.textContent = 'Permissão negada · tentar de novo';
         return;
     }
 
     if (!coleta) {
-        btn.textContent = 'sensores ok';
+        btn.remove();
         return;
     }
 
+    virarSelo();
     btn.textContent = 'aguardando pergunta...';
     const q = await perguntaPronta;
     iniciarColeta({
@@ -46,12 +69,10 @@ btn.addEventListener('click', async () => {
         questionId: q.id,
         alvo: { lat: q.lat, lng: q.lng },
     });
-    btn.disabled = true;
     setInterval(() => {
-        btn.textContent = `coletando · ${getBufferColeta().length} na fila`;
+        btn.textContent = `● coletando · ${getBufferColeta().length} na fila`;
     }, 1000);
 });
-
 
 const setStatus = (t) => (el.status.textContent = t);
 

@@ -85,4 +85,20 @@ class AcompanhamentoTest extends TestCase
         ]);
         $this->assertSame('student', User::where('username', 'beto')->value('type'));
     }
+
+    public function test_professor_zera_participacoes_e_duracao_em_dias(): void
+    {
+        $this->withoutVite();
+        [$prof, $aluno, $act] = $this->cenario();
+        $this->actingAs($aluno)->post(route('play.start', $act));
+        $this->assertSame(1, Participation::count());
+
+        $this->delete(route('admin.reports.reset', $act))->assertForbidden();
+        $this->actingAs($prof)->delete(route('admin.reports.reset', $act))
+            ->assertRedirect(route('admin.reports.activity', $act));
+        $this->assertSame(0, Participation::count());
+
+        $this->assertSame('27d 19h', \App\Support\Duracao::format(27 * 86400 + 19 * 3600 + 43 * 60));
+        $this->assertSame('1:02:05', \App\Support\Duracao::format(3725));
+    }
 }

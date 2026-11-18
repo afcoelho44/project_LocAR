@@ -144,6 +144,18 @@ class ReportController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /** apaga todas as participações da atividade (etapas, tentativas e amostras vão junto) */
+    public function reset(Activity $activity)
+    {
+        $this->authorizeActivity($activity);
+
+        $n = $activity->participations()->count();
+        $activity->participations()->delete();
+
+        return redirect()->route('admin.reports.activity', $activity)
+            ->with('status', "{$n} participação(ões) removida(s).");
+    }
+
     private function avg(Collection $values): ?float
     {
         $v = $values->filter(fn ($x) => $x !== null);
