@@ -273,7 +273,7 @@ async function main() {
 
         if (!unlocked && dist <= q.radius) {
             unlocked = true;
-            dicas.parar();
+            dicas.chegou();
             el.btnResponder.hidden = false;
         }
     });
