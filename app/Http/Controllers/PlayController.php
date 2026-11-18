@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Activity;
+use App\Models\Attempt;
 use App\Models\Participation;
+use App\Models\ParticipationStep;
 use App\Models\Question;
 
 class PlayController extends Controller
@@ -41,6 +43,12 @@ class PlayController extends Controller
                 'current_question_id' => $first->id,
                 'started_at'          => now(),
             ]
+        );
+
+        // primeira etapa começa a contar agora
+        $participation->steps()->firstOrCreate(
+            ['question_id' => $participation->current_question_id],
+            ['started_at' => now()]
         );
 
         return redirect()->route('play.show', $participation);
@@ -91,6 +99,12 @@ class PlayController extends Controller
         $question = $this->resolveQuestion($participation);
         [$number, $total] = $this->progress($participation, $question);
 
+        // primeira vez que abre a pergunta = chegou ao ponto
+        $step = $this->stepFor($participation, $question);
+        if (! $step->arrived_at) {
+            $step->update(['arrived_at' => now()]);
+        }
+
         return view('play.question', compact('participation', 'question', 'number', 'total') + ['clue' => null]);
     }
 
@@ -112,7 +126,20 @@ class PlayController extends Controller
         $answer = $question->answers->firstWhere('id', (int) $data['answer_id']);
         abort_if(! $answer, 422);
 
+        Attempt::create([
+            'participation_id' => $participation->id,
+            'question_id'      => $question->id,
+            'answer_id'        => $answer->id,
+            'is_correct'       => $answer->is_correct,
+        ]);
+
+        $step = $this->stepFor($participation, $question);
+        $step->arrived_at ??= now();
+
         if (! $answer->is_correct) {
+            $step->wrong_attempts++;
+            $step->save();
+
             return back()->withErrors(['answer_id' => 'Resposta incorreta. Tente de novo!']);
         }
 
@@ -121,9 +148,20 @@ class PlayController extends Controller
             ->orderBy('position')
             ->first();
 
+        $step->completed_at = now();
+        $step->save();
+
         $participation->update($next
             ? ['current_question_id' => $next->id]
             : ['finished_at' => now()]);
+
+        // a próxima etapa começa a contar no momento do acerto
+        if ($next) {
+            $participation->steps()->firstOrCreate(
+                ['question_id' => $next->id],
+                ['started_at' => now()]
+            );
+        }
 
         return redirect()->route('play.question', $participation)->with('clue', [
             'text'     => $question->clue_text,
@@ -182,6 +220,14 @@ class PlayController extends Controller
         }
 
         return $question;
+    }
+
+    private function stepFor(Participation $participation, Question $question): ParticipationStep
+    {
+        return $participation->steps()->firstOrCreate(
+            ['question_id' => $question->id],
+            ['started_at' => now()]
+        );
     }
 
     private function progress(Participation $participation, Question $question): array

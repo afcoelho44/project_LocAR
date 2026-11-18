@@ -12,25 +12,19 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                </div>
-            </div>
+                    @if (auth()->user()->isTeacher())
+                        <x-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*', 'admin.reports.*')">
+                            Atividades e acompanhamento
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.objects3d.index')" :active="request()->routeIs('admin.objects3d.*')">
+                            Objetos 3D
+                        </x-nav-link>
+                    @endif
                     <x-nav-link :href="route('play.index')" :active="request()->routeIs('play.*')">
                         Caça ao tesouro
                     </x-nav-link>
-            @if (auth()->user()->isTeacher())
-                <x-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">
-                    Atividades
-                </x-nav-link>
-            @endif
-
-            @if (auth()->user()->isTeacher())
-                <x-nav-link :href="route('admin.objects3d.index')" :active="request()->routeIs('admin.objects3d.*')">
-                    Objetos 3D
-                </x-nav-link>
-            @endif
+                </div>
+            </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ml-6">
@@ -91,7 +85,7 @@
             </x-responsive-nav-link>
 
         @if (auth()->user()->isTeacher())
-            <x-responsive-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*')">
+            <x-responsive-nav-link :href="route('admin.activities.index')" :active="request()->routeIs('admin.activities.*', 'admin.reports.*')">
                 Atividades
             </x-responsive-nav-link>
         @endif
