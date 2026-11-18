@@ -1,0 +1,72 @@
+# Produção (VM do Oracle Cloud). Uso: ver deploy/README.md
+# As variáveis ${...} vêm do .env do Laravel (o compose lê o .env da pasta).
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    networks: [laravel]
+
+  # Caddy no lugar do nginx: serve o public/, repassa o PHP e emite o certificado HTTPS sozinho
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO no .env}
+    volumes:
+      - .:/var/www:ro
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks: [laravel]
+
+  mysql:
+    image: mysql:8.0
+    # menos memória (a VM gratuita é pequena)
+    command: --performance-schema=OFF --innodb-buffer-pool-size=128M
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?defina DB_ROOT_PASSWORD no .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    networks: [laravel]
+
+  # componente de IA (repo componente_IA clonado ao lado deste). Sem modelo treinado
+  # o /corrigir responde 503 e o Laravel usa a distância do GPS.
+  ia:
+    build: ${IA_DIR:-../componente_IA}
+    volumes:
+      - ${IA_DIR:-../componente_IA}/modelos:/app/modelos
+      - ${IA_DIR:-../componente_IA}/dados:/app/dados
+    restart: unless-stopped
+    networks: [laravel]
+
+  node:
+    image: node:20-alpine
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    profiles: ["tools"]
+
+networks:
+  laravel:
+
+volumes:
+  mysql_data:
+  caddy_data:
+  caddy_config:
