@@ -141,5 +141,12 @@ export function criarDicas({ elemento, url = null, csrf = null, aoAtualizar = nu
             timer = null;
             elemento.style.display = 'none';
         },
+        /** dentro do raio do ponto: para as dicas e avisa que chegou */
+        chegou() {
+            this.parar();
+            elemento.textContent = '🎯 Você chegou! Procure o objeto pela câmera';
+            elemento.style.background = '#16a34a';
+            elemento.style.display = 'block';
+        },
     };
 }
