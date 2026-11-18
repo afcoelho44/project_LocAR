@@ -16,16 +16,14 @@
             display: flex; justify-content: space-between; gap: 8px;
         }
         #hud a { color: #93c5fd; }
-        #panel {
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: none;
-            padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-            background: #fff; border-radius: 16px 16px 0 0; max-height: 60%; overflow-y: auto;
+        #btn-responder {
+            position: fixed; left: 50%; transform: translateX(-50%); z-index: 20;
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+            padding: 14px 28px; font-size: 16px; font-weight: 600; border-radius: 999px;
+            background: #16a34a; color: #fff; text-decoration: none; white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,.35);
         }
-        #panel h3 { margin: 0 0 8px; font-size: 16px; }
-        #panel button {
-            display: block; width: 100%; text-align: left; margin-top: 8px; padding: 12px;
-            border: 1px solid #d1d5db; border-radius: 8px; background: #f9fafb; font-size: 15px;
-        }
+        #btn-responder[hidden] { display: none; }
     </style>
 </head>
 <body>
@@ -48,10 +46,10 @@
             Ativar sensores
         </button>
 
-        <div id="panel">
-            <h3 id="q-text"></h3>
-            <div id="q-answers"></div>
-        </div>
+        {{-- aparece só quando o aluno entra no raio do ponto; leva para a página da pergunta --}}
+        <a id="btn-responder" hidden href="{{ route('play.question', $participation, false) }}">
+            Responder pergunta
+        </a>
     </div>
 </body>
 </html>
