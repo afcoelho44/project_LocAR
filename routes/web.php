@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\DicaController;
 use App\Http\Controllers\Object3dController;
 use App\Http\Controllers\PlayController;
 use App\Http\Controllers\QuestionController;
@@ -56,6 +57,7 @@ Route::middleware(['auth', 'teacher'])
         Route::get('participations/{participation}/question', [PlayController::class, 'question'])->name('question');
         Route::post('participations/{participation}/answer', [PlayController::class, 'answer'])->name('answer');
         Route::post('participations/{participation}/samples', [SensorSampleController::class, 'store'])->name('samples.store');
+        Route::post('participations/{participation}/distancia', [DicaController::class, 'distancia'])->name('distancia');
     });
     
 require __DIR__.'/auth.php';

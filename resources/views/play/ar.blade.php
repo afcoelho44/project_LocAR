@@ -24,12 +24,21 @@
             box-shadow: 0 4px 12px rgba(0,0,0,.35);
         }
         #btn-responder[hidden] { display: none; }
+        #dica {
+            position: fixed; left: 12px; right: 12px; z-index: 10; display: none;
+            top: calc(env(safe-area-inset-top, 0px) + 64px);
+            padding: 10px 14px; border-radius: 10px; color: #fff;
+            font-size: 16px; font-weight: 600; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.35); transition: background .4s;
+        }
     </style>
 </head>
 <body>
     <div id="ar-root"
          data-state-url="{{ route('play.state', $participation, false) }}"
-         data-samples-url="{{ route('play.samples.store', $participation, false) }}">
+         data-samples-url="{{ route('play.samples.store', $participation, false) }}"
+         {{-- sem IA_URL no .env a dica usa só o GPS, sem chamar o servidor --}}
+         data-dica-url="{{ config('services.ia.url') ? route('play.distancia', $participation, false) : '' }}">
         <canvas id="ar-canvas"></canvas>
 
         <div id="hud">
@@ -45,6 +54,9 @@
             padding:14px 24px; font-size:16px; border-radius:8px; border:0; background:#2563eb; color:#fff;">
             Ativar sensores
         </button>
+
+        {{-- dica quente/frio (resources/js/dicas.js) --}}
+        <div id="dica"></div>
 
         {{-- aparece só quando o aluno entra no raio do ponto; leva para a página da pergunta --}}
         <a id="btn-responder" hidden href="{{ route('play.question', $participation, false) }}">

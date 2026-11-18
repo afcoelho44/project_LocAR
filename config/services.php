@@ -25,6 +25,14 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    // componente de IA (API Flask do repositório componente_IA)
+    // vazio = dicas só com o GPS. No Docker (Windows): http://host.docker.internal:5000
+    'ia' => [
+        'url' => env('IA_URL'),
+        'timeout' => (float) env('IA_TIMEOUT', 1.5),   // segundos
+        'ambiente' => env('IA_AMBIENTE', 'outdoor'),   // indoor | outdoor (feature do modelo)
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
