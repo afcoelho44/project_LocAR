@@ -6,6 +6,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Object3dController;
 use App\Http\Controllers\PlayController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SensorSampleController;
 
 
@@ -29,6 +30,11 @@ Route::middleware(['auth', 'teacher'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        // acompanhamento da turma
+        Route::get('activities/{activity}/report', [ReportController::class, 'activity'])->name('reports.activity');
+        Route::get('activities/{activity}/report.csv', [ReportController::class, 'csv'])->name('reports.csv');
+        Route::get('participations/{participation}', [ReportController::class, 'participation'])->name('reports.participation');
+
         Route::resource('activities', ActivityController::class);
         Route::resource('activities.questions', QuestionController::class)
             ->except(['index', 'show'])

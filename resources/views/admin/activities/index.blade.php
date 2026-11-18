@@ -29,6 +29,7 @@
                                 <td class="px-4 py-3">{{ $activity->questions_count }}</td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
                                     <a href="{{ route('admin.activities.show', $activity) }}" class="text-blue-600">Abrir</a>
+                                    <a href="{{ route('admin.reports.activity', $activity) }}" class="ml-3 text-green-700">Acompanhar</a>
                                     <a href="{{ route('admin.activities.edit', $activity) }}" class="ml-3 text-indigo-600">Editar</a>
                                     <form method="POST" action="{{ route('admin.activities.destroy', $activity) }}"
                                           class="inline" onsubmit="return confirm('Remover esta atividade?')">
