@@ -34,6 +34,7 @@ Route::middleware(['auth', 'teacher'])
         Route::get('activities/{activity}/report', [ReportController::class, 'activity'])->name('reports.activity');
         Route::get('activities/{activity}/report.csv', [ReportController::class, 'csv'])->name('reports.csv');
         Route::get('participations/{participation}', [ReportController::class, 'participation'])->name('reports.participation');
+        Route::delete('activities/{activity}/participations', [ReportController::class, 'reset'])->name('reports.reset');
 
         Route::resource('activities', ActivityController::class);
         Route::resource('activities.questions', QuestionController::class)

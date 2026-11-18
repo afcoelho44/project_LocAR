@@ -11,12 +11,24 @@
                    class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-xs uppercase rounded-md">Atualizar</a>
                 <a href="{{ route('admin.reports.csv', $activity) }}"
                    class="px-4 py-2 bg-gray-800 text-white text-xs uppercase rounded-md">Exportar CSV</a>
+                @if ($rows->isNotEmpty())
+                    <form method="POST" action="{{ route('admin.reports.reset', $activity) }}"
+                          onsubmit="return confirm('Apagar TODAS as participações desta atividade?\n\nIsso remove tempos, erros, tentativas e as amostras de sensores (GPS etc.) dos alunos. Exporte os CSVs antes se precisar dos dados.')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="px-4 py-2 bg-red-600 text-white text-xs uppercase rounded-md">Zerar participações</button>
+                    </form>
+                @endif
             </div>
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+            @if (session('status'))
+                <div class="p-4 bg-green-100 text-green-800 rounded-lg">{{ session('status') }}</div>
+            @endif
 
             {{-- cartões --}}
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>{{ $participation->activity->name }} · RA</title>
     @vite('resources/js/ar.js')
     <style>
-        html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
-        #ar-canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+        html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; touch-action: manipulation; overscroll-behavior: none; }
+        #ar-canvas { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
         #hud {
             position: fixed; top: 0; left: 0; right: 0; z-index: 10;
             padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
