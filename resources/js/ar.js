@@ -117,9 +117,51 @@ cam.on('webcamerror', (err) => setStatus(`Erro na câmera: ${err.message ?? err.
 let spinner = null;
 renderer.setAnimationLoop(() => {
     controls.update();
-    if (spinner) spinner.rotation.y += 0.01;
+    if (spinner) {
+        spinner.rotation.y += 0.01;
+        manterDistanciaMinima(spinner);
+    }
     renderer.render(scene, camera);
 });
+
+// ---------- distância mínima de exibição ----------
+// O GPS erra alguns metros: perto do ponto o objeto "entraria" na câmera e
+// ocuparia a tela toda. Abaixo de MIN_VIEW_DIST ele continua na mesma direção,
+// mas é desenhado a MIN_VIEW_DIST. A distância real (desbloqueio) não muda.
+const MIN_VIEW_DIST = 5;   // metros
+const SUAVIZACAO = 0.1;    // 0..1: quanto anda por quadro rumo à posição alvo (evita pulos do GPS)
+const _alvo = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+let ultimaDirecao = null;
+
+function manterDistanciaMinima(obj) {
+    const real = obj.userData.posicaoReal;
+    if (!real) return;
+
+    _dir.set(real.x - camera.position.x, 0, real.z - camera.position.z);
+    const d = _dir.length();
+
+    if (d >= MIN_VIEW_DIST) {
+        _alvo.copy(real);
+        ultimaDirecao = _dir.divideScalar(d).clone();
+    } else {
+        if (d > 0.3) {
+            ultimaDirecao = _dir.divideScalar(d).clone();
+        } else if (!ultimaDirecao) {
+            // em cima do ponto e sem direção anterior: coloca à frente da câmera
+            camera.getWorldDirection(_dir);
+            _dir.y = 0;
+            ultimaDirecao = _dir.lengthSq() > 0 ? _dir.normalize().clone() : new THREE.Vector3(0, 0, -1);
+        }
+        _alvo.set(
+            camera.position.x + ultimaDirecao.x * MIN_VIEW_DIST,
+            real.y,
+            camera.position.z + ultimaDirecao.z * MIN_VIEW_DIST,
+        );
+    }
+
+    obj.position.lerp(_alvo, SUAVIZACAO);
+}
 
 // ---------- objeto 3D ----------
 const TARGET_SIZE = 2; // maior dimensão do modelo, em metros
@@ -203,6 +245,7 @@ async function main() {
             const obj = await buildObject(q.object_url);
             spinner = obj;
             locar.add(obj, q.lng, q.lat, OBJECT_ELEVATION);
+            obj.userData.posicaoReal = obj.position.clone();
         }
 
         if (!unlocked && dist <= q.radius) {
