@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Activity;
 use App\Models\Participation;
 use App\Models\Question;
@@ -67,6 +68,67 @@ class PlayController extends Controller
         $participation->load('activity');
 
         return view('play.ar', compact('participation'));
+    }
+
+    public function question(Participation $participation)
+    {
+        $this->authorizeOwner($participation);
+        $participation->load('activity');
+
+        // acabou de acertar: mostra a pista (vem do flash do answer())
+        if (session()->has('clue')) {
+            return view('play.question', [
+                'participation' => $participation,
+                'clue'          => session('clue'),
+                'question'      => null,
+            ]);
+        }
+
+        if ($participation->isFinished()) {
+            return redirect()->route('play.show', $participation);
+        }
+
+        $question = $this->resolveQuestion($participation);
+        [$number, $total] = $this->progress($participation, $question);
+
+        return view('play.question', compact('participation', 'question', 'number', 'total') + ['clue' => null]);
+    }
+
+    public function answer(Request $request, Participation $participation)
+    {
+        $this->authorizeOwner($participation);
+        abort_if($participation->isFinished(), 404);
+        $participation->load('activity');
+
+        $question = $this->resolveQuestion($participation);
+
+        $data = $request->validate([
+            'answer_id' => ['required', 'integer'],
+        ], [
+            'answer_id.required' => 'Escolha uma alternativa.',
+        ]);
+
+        // só aceita alternativas da pergunta atual
+        $answer = $question->answers->firstWhere('id', (int) $data['answer_id']);
+        abort_if(! $answer, 422);
+
+        if (! $answer->is_correct) {
+            return back()->withErrors(['answer_id' => 'Resposta incorreta. Tente de novo!']);
+        }
+
+        $next = $participation->activity->questions()
+            ->where('position', '>', $question->position)
+            ->orderBy('position')
+            ->first();
+
+        $participation->update($next
+            ? ['current_question_id' => $next->id]
+            : ['finished_at' => now()]);
+
+        return redirect()->route('play.question', $participation)->with('clue', [
+            'text'     => $question->clue_text,
+            'finished' => ! $next,
+        ]);
     }
 
     public function state(Participation $participation)

@@ -7,9 +7,7 @@ const root = document.getElementById('ar-root');
 const el = {
     status: document.getElementById('status'),
     step: document.getElementById('step'),
-    panel: document.getElementById('panel'),
-    qText: document.getElementById('q-text'),
-    qAnswers: document.getElementById('q-answers'),
+    btnResponder: document.getElementById('btn-responder'),
 };
 
 // ?fake=far  -> simula GPS a ~33 m do ponto (teste no computador)
@@ -104,6 +102,9 @@ renderer.setAnimationLoop(() => {
 
 // ---------- objeto 3D ----------
 const TARGET_SIZE = 2; // maior dimensão do modelo, em metros
+// altura do centro do objeto em relação à câmera (0 = na altura dos olhos,
+// assim ele aparece no meio da tela quando o celular está na vertical)
+const OBJECT_ELEVATION = 0;
 
 async function buildObject(url) {
     const group = new THREE.Group();
@@ -180,12 +181,12 @@ async function main() {
             placed = true;
             const obj = await buildObject(q.object_url);
             spinner = obj;
-            locar.add(obj, q.lng, q.lat, -1);
+            locar.add(obj, q.lng, q.lat, OBJECT_ELEVATION);
         }
 
         if (!unlocked && dist <= q.radius) {
             unlocked = true;
-            showQuestion(q);
+            el.btnResponder.hidden = false;
         }
     });
 
@@ -194,18 +195,6 @@ async function main() {
     } else {
         locar.startGps();
     }
-}
-
-function showQuestion(q) {
-    el.qText.textContent = q.description;
-    el.qAnswers.replaceChildren(...q.answers.map((a) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.dataset.id = a.id;
-        b.textContent = `${a.alternative}) ${a.description}`;
-        return b; // o clique será ligado na Etapa 7
-    }));
-    el.panel.style.display = 'block';
 }
 
 main().catch((e) => {
