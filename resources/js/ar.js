@@ -2,16 +2,20 @@ import * as THREE from 'three';
 import * as LocAR from 'locar';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getGirou, pedirPermissao, iniciarColeta, getBufferColeta } from './sensores.js';
+import { criarDicas } from './dicas.js';
+import { iniciarCaminhada } from './fake-walk.js';
 
 const root = document.getElementById('ar-root');
 const el = {
     status: document.getElementById('status'),
     step: document.getElementById('step'),
     btnResponder: document.getElementById('btn-responder'),
+    dica: document.getElementById('dica'),
 };
 
 // ?fake=far  -> simula GPS a ~33 m do ponto (teste no computador)
 // ?fake=here -> simula GPS em cima do ponto
+// ?fake=walk -> simula uma caminhada até o ponto (mostra quente/frio/sem dica)
 const params = new URLSearchParams(location.search);
 const fake = params.get('fake');
 
@@ -226,6 +230,16 @@ async function main() {
     let placed = false;
     let unlocked = false;
 
+    // dicas quente/frio: a IA corrige a distância (via Laravel); sem IA, usa o GPS
+    let fonteDist = '';
+    const dicas = criarDicas({
+        elemento: el.dica,
+        url: root.dataset.dicaUrl || null,
+        csrf,
+        aoAtualizar: (r) => { fonteDist = r.dist == null ? '' : ` · ${r.fonte === 'ia' ? 'IA' : 'GPS'} ${Math.round(r.dist)} m`; },
+    });
+    dicas.iniciar();
+
     locar.on('gpserror', (code) => setStatus(`Erro de GPS (código ${code}). Libere a localização.`));
 
     let fakePos = null;
@@ -235,7 +249,8 @@ async function main() {
     }
 
     locar.on('gpsupdate', async (pos) => {
-        const c = extractCoords(pos) ?? fakePos;
+        // no modo fake a posição "verdadeira" (com accuracy) é a fakePos
+        const c = fake ? fakePos : extractCoords(pos);
         if (!c) {
             console.warn('gpsupdate com formato inesperado:', pos);
             return;
@@ -243,7 +258,7 @@ async function main() {
         const { latitude, longitude, accuracy } = c;
         const dist = distanceMeters(latitude, longitude, q.lat, q.lng);
         const g = getGirou();
-        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m · obj ${TARGET_SIZE} m · girou ${Math.round(g)}°`);
+        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m${fonteDist} · girou ${Math.round(g)}°`);
 
         if (!placed) {
             placed = true;
@@ -253,13 +268,22 @@ async function main() {
             obj.userData.posicaoReal = obj.position.clone();
         }
 
+        // o desbloqueio continua pela distância do GPS; a IA só alimenta a dica
+        if (!unlocked) dicas.registrar(dist, accuracy);
+
         if (!unlocked && dist <= q.radius) {
             unlocked = true;
+            dicas.parar();
             el.btnResponder.hidden = false;
         }
     });
 
-    if (fake) {
+    if (fake === 'walk') {
+        iniciarCaminhada({ lat: q.lat, lng: q.lng }, (p) => {
+            fakePos = p;
+            locar.fakeGps(p.longitude, p.latitude, null, p.accuracy);
+        });
+    } else if (fake) {
         locar.fakeGps(fakePos.longitude, fakePos.latitude);
     } else {
         locar.startGps();
