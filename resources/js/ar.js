@@ -111,6 +111,11 @@ const cam = new LocAR.Webcam({ video: { facingMode: 'environment' } }, null);
 const controls = new LocAR.DeviceOrientationControls(camera, { enablePermissionDialog: false });
 
 
+// sem isto a câmera 3D não gira com o celular e o objeto fica "grudado" na tela
+controls.on('deviceorientationgranted', (ev) => ev.target.connect());
+controls.on('deviceorientationerror', (err) => setStatus(`Erro nos sensores de orientação: ${err.message ?? err.code}`));
+controls.init();
+
 cam.on('webcamstarted', (ev) => { scene.background = ev.texture; });
 cam.on('webcamerror', (err) => setStatus(`Erro na câmera: ${err.message ?? err.code}`));
 
