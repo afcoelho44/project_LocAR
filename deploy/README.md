@@ -49,10 +49,10 @@ Domínio próprio/DuckDNS: `DOMINIO=meu.duckdns.org bash deploy/instalar.sh` (an
 | Parar / subir | `sudo docker compose -f docker-compose.prod.yml down` / `up -d` |
 
 ## Treinar a IA (depois do experimento com a fita)
-Sem modelo, a IA responde 503 e as dicas usam a distância do GPS — o jogo funciona normalmente.
+Sem modelo, a IA responde 503 e as dicas usam a regra de distância — o jogo funciona normalmente.
 
-1. No PC: `python analisar.py coleta_*.csv` → gera `resultados/erro_distancia_por_leitura.csv`
+1. No PC: `python analisar.py coleta_*.csv` → gera `resultados/leituras_processadas.csv`
 2. Copiar para a VM:
-   `scp -i chave.key resultados/erro_distancia_por_leitura.csv ubuntu@IP_DA_VM:~/componente_IA/dados/`
-3. Na VM: `bash deploy/treinar_ia.sh`
-   (treina, reinicia a API e mostra o `/saude`; a tabela de validação fica em `componente_IA/dados/validacao.csv`)
+   `scp -i chave.key resultados/leituras_processadas.csv ubuntu@IP_DA_VM:~/componente_IA/dados/`
+3. Na VM: `bash deploy/treinar_ia.sh dados/leituras_processadas.csv --excluir-local "Entre o bloco F e o RU"`
+   (treina, reinicia a API e mostra o `/saude`; as tabelas da validação (IA x regra) ficam em `componente_IA/dados/validacao/`)

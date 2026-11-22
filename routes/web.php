@@ -57,7 +57,7 @@ Route::middleware(['auth', 'teacher'])
         Route::get('participations/{participation}/question', [PlayController::class, 'question'])->name('question');
         Route::post('participations/{participation}/answer', [PlayController::class, 'answer'])->name('answer');
         Route::post('participations/{participation}/samples', [SensorSampleController::class, 'store'])->name('samples.store');
-        Route::post('participations/{participation}/distancia', [DicaController::class, 'distancia'])->name('distancia');
+        Route::post('participations/{participation}/dica', [DicaController::class, 'classificar'])->name('dica');
     });
     
 require __DIR__.'/auth.php';
