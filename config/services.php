@@ -25,12 +25,12 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
-    // componente de IA (API Flask do repositório componente_IA)
-    // vazio = dicas só com o GPS. No Docker (Windows): http://host.docker.internal:5000
+    // componente de IA (API Flask do repositório componente_IA) — classifica quente/morno/frio
+    // url vazia = dicas só pela regra de distância. No Docker (Windows): http://host.docker.internal:5000
     'ia' => [
         'url' => env('IA_URL'),
         'timeout' => (float) env('IA_TIMEOUT', 1.5),   // segundos
-        'ambiente' => env('IA_AMBIENTE', 'outdoor'),   // indoor | outdoor (feature do modelo)
+        'modo' => env('IA_MODO', 'ia'),                // ia | regra | alternar (metade das etapas com cada)
     ],
 
     'ses' => [

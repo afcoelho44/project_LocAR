@@ -47,7 +47,7 @@ services:
     networks: [laravel]
 
   # componente de IA (repo componente_IA clonado ao lado deste). Sem modelo treinado
-  # o /corrigir responde 503 e o Laravel usa a distância do GPS.
+  # o /classificar responde 503 e o Laravel usa a regra de distância.
   ia:
     build: ${IA_DIR:-../componente_IA}
     volumes:

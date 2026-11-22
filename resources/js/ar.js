@@ -230,13 +230,15 @@ async function main() {
     let placed = false;
     let unlocked = false;
 
-    // dicas quente/frio: a IA corrige a distância (via Laravel); sem IA, usa o GPS
-    let fonteDist = '';
+    // dica quente/morno/frio: o Laravel classifica pela IA ou pela regra (IA_MODO)
+    // ?debug=1 mostra quem classificou; sem ele o aluno não sabe
+    const debug = params.get('debug') === '1';
+    let fonteDica = '';
     const dicas = criarDicas({
         elemento: el.dica,
         url: root.dataset.dicaUrl || null,
         csrf,
-        aoAtualizar: (r) => { fonteDist = r.dist == null ? '' : ` · ${r.fonte === 'ia' ? 'IA' : 'GPS'} ${Math.round(r.dist)} m`; },
+        aoAtualizar: (r) => { fonteDica = debug && r.fonte ? ` · dica: ${r.fonte === 'ia' ? 'IA' : r.fonte}` : ''; },
     });
     dicas.iniciar();
 
@@ -255,10 +257,10 @@ async function main() {
             console.warn('gpsupdate com formato inesperado:', pos);
             return;
         }
-        const { latitude, longitude, accuracy } = c;
+        const { latitude, longitude, accuracy, speed } = c;
         const dist = distanceMeters(latitude, longitude, q.lat, q.lng);
         const g = getGirou();
-        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m${fonteDist} · girou ${Math.round(g)}°`);
+        setStatus(`${Math.round(dist)} m do ponto · GPS ±${Math.round(accuracy ?? 0)} m${fonteDica} · girou ${Math.round(g)}°`);
 
         if (!placed) {
             placed = true;
@@ -269,7 +271,7 @@ async function main() {
         }
 
         // o desbloqueio continua pela distância do GPS; a IA só alimenta a dica
-        if (!unlocked) dicas.registrar(dist, accuracy);
+        if (!unlocked) dicas.registrar({ lat: latitude, lng: longitude, accuracy, speed, dist });
 
         if (!unlocked && dist <= q.radius) {
             unlocked = true;

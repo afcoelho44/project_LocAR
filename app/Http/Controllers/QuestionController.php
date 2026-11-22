@@ -20,7 +20,7 @@ class QuestionController extends Controller
 
         $question = new Question([
             'position' => (Question::where('activity_id', $activity->id)->max('position') ?? 0) + 1,
-            'radius'   => 20,
+            'radius'   => 5,   // menor que o limite de quente (10 m), senão a dica quente nunca aparece
         ]);
 
         return view('admin.questions.create', [

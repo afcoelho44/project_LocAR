@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Treina o modelo do componente_IA no servidor e reinicia a API.
-# Antes: copie o erro_distancia_por_leitura.csv (saída do analisar.py) para componente_IA/dados/
-#   bash deploy/treinar_ia.sh                       # usa dados/erro_distancia_por_leitura.csv
-#   bash deploy/treinar_ia.sh dados/outro.csv
+# Antes: copie o leituras_processadas.csv (saída do experimento/analisar.py) para componente_IA/dados/
+#   bash deploy/treinar_ia.sh                                   # usa dados/leituras_processadas.csv
+#   bash deploy/treinar_ia.sh dados/outro.csv --excluir-local "Entre o bloco F e o RU"
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DC="sudo docker compose -f docker-compose.prod.yml"
-CSV=${1:-dados/erro_distancia_por_leitura.csv}
+CSV=${1:-dados/leituras_processadas.csv}
+shift || true
 
-$DC run --rm ia python treinar.py "$CSV" modelos/modelo.joblib --tabela dados/validacao.csv
+$DC run --rm ia python treinar.py "$CSV" modelos/modelo.joblib --saida-validacao dados/validacao "$@"
 $DC restart ia
 sleep 3
 echo "Saúde da IA:"

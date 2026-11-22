@@ -37,8 +37,8 @@
     <div id="ar-root"
          data-state-url="{{ route('play.state', $participation, false) }}"
          data-samples-url="{{ route('play.samples.store', $participation, false) }}"
-         {{-- sem IA_URL no .env a dica usa só o GPS, sem chamar o servidor --}}
-         data-dica-url="{{ config('services.ia.url') ? route('play.distancia', $participation, false) : '' }}">
+         {{-- dica quente/morno/frio: o Laravel decide entre a IA e a regra (IA_MODO) --}}
+         data-dica-url="{{ route('play.dica', $participation, false) }}">
         <canvas id="ar-canvas"></canvas>
 
         <div id="hud">

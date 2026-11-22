@@ -2,63 +2,128 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dica;
 use App\Models\Participation;
+use App\Support\Proximidade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Ponte entre a tela de RA e o componente de IA (API Flask, repo componente_IA).
+ * Dica de proximidade (quente / morno / frio) da tela de RA.
  *
- * O celular manda a distância bruta do GPS até o objeto; a IA devolve a
- * distância corrigida. Se a IA não estiver configurada, falhar ou demorar,
- * devolve a própria distância do GPS (fonte = 'gps') — a dica nunca trava o jogo.
+ * O celular manda as últimas leituras do GPS; a coordenada do objeto vem do banco
+ * (etapa atual da participação). Quem classifica depende de IA_MODO:
+ *   - ia       : componente de IA (API Flask, repo componente_IA)
+ *   - regra    : só a regra de distância (App\Support\Proximidade)
+ *   - alternar : metade das etapas com a IA e metade com a regra, alternando a ordem
+ *                entre participantes (para comparar as duas no teste piloto)
+ * Se a IA não estiver configurada, falhar ou demorar, usa a regra (fonte = 'regra')
+ * — a dica nunca trava o jogo. Cada dica fica registrada na tabela `dicas`.
  */
 class DicaController extends Controller
 {
     /** depois de uma falha, fica este tempo sem tentar a IA (evita esperar o timeout a cada segundo) */
     private const PAUSA_APOS_FALHA_S = 30;
 
-    public function distancia(Request $request, Participation $participation)
+    public function classificar(Request $request, Participation $participation)
     {
         abort_if($participation->user_id !== auth()->id(), 403);
+        abort_if($participation->isFinished(), 409, 'Participação já concluída.');
+
+        $question = $participation->currentQuestion;
+        abort_if($question === null, 409, 'Sem etapa atual.');
 
         $dados = $request->validate([
-            'd_gps_m'  => ['required', 'numeric', 'min:0', 'max:100000'],
-            'accuracy' => ['nullable', 'numeric', 'min:0'],
+            'leituras'            => ['required', 'array', 'min:1', 'max:20'],
+            'leituras.*.lat'      => ['required', 'numeric', 'between:-90,90'],
+            'leituras.*.lng'      => ['required', 'numeric', 'between:-180,180'],
+            'leituras.*.accuracy' => ['nullable', 'numeric', 'min:0'],
+            'leituras.*.speed'    => ['nullable', 'numeric', 'min:0'],
+            'leituras.*.t_ms'     => ['nullable', 'numeric'],
         ]);
 
-        $gps = ['dist_m' => round((float) $dados['d_gps_m'], 2), 'fonte' => 'gps'];
+        $leituras = array_map(fn ($l) => [
+            'lat'      => (float) $l['lat'],
+            'lng'      => (float) $l['lng'],
+            'accuracy' => isset($l['accuracy']) ? (float) $l['accuracy'] : null,
+            'speed'    => isset($l['speed']) ? (float) $l['speed'] : null,
+            't_ms'     => isset($l['t_ms']) ? (float) $l['t_ms'] : null,
+        ], array_values($dados['leituras']));
 
-        $url = config('services.ia.url');
-        if (! $url || Cache::has('ia_fora_do_ar')) {
-            return response()->json($gps);
+        $ultima = end($leituras);
+        $dist = Proximidade::distancia($ultima['lat'], $ultima['lng'], (float) $question->lat, (float) $question->lng);
+        $braco = $this->braco($participation, (int) $question->position);
+
+        $resultado = ['classe' => Proximidade::classe($dist), 'fonte' => 'regra', 'dist_m' => round($dist, 2)];
+        if ($braco === 'ia') {
+            $resultado = $this->perguntarIa($leituras, $question, $request->userAgent()) ?? $resultado;
+        }
+
+        Dica::create([
+            'participation_id' => $participation->id,
+            'question_id'      => $question->id,
+            'braco'            => $braco,
+            'fonte'            => $resultado['fonte'],
+            'classe'           => $resultado['classe'],
+            'dist_m'           => $resultado['dist_m'],
+            'accuracy'         => $ultima['accuracy'],
+        ]);
+
+        // o braço não vai para o celular: o aluno não sabe se a dica veio da IA ou da regra
+        return response()->json($resultado);
+    }
+
+    /** 'ia' ou 'regra' para esta etapa, conforme IA_MODO */
+    private function braco(Participation $participation, int $posicao): string
+    {
+        $modo = config('services.ia.modo');
+        if ($modo === 'regra' || ! config('services.ia.url')) {
+            return 'regra';
+        }
+        if ($modo === 'alternar') {
+            // ids consecutivos começam por braços diferentes; etapas alternam
+            return ($participation->id + $posicao) % 2 === 0 ? 'ia' : 'regra';
+        }
+
+        return 'ia';
+    }
+
+    /** classe pela IA, ou null se ela estiver fora do ar / responder errado */
+    private function perguntarIa(array $leituras, $question, ?string $userAgent): ?array
+    {
+        if (Cache::has('ia_fora_do_ar')) {
+            return null;
         }
 
         try {
             $resposta = Http::timeout(config('services.ia.timeout'))
                 ->acceptJson()
-                ->post(rtrim($url, '/') . '/corrigir', [
-                    'd_gps_m'     => (float) $dados['d_gps_m'],
-                    'accuracy'    => isset($dados['accuracy']) ? (float) $dados['accuracy'] : null,
-                    'ambiente'    => config('services.ia.ambiente'),
-                    'dispositivo' => $this->dispositivo($request->userAgent()),
+                ->post(rtrim(config('services.ia.url'), '/') . '/classificar', [
+                    'objeto'      => ['lat' => (float) $question->lat, 'lng' => (float) $question->lng],
+                    'leituras'    => $leituras,
+                    'dispositivo' => $this->dispositivo($userAgent),
                 ]);
 
-            $dist = $resposta->json('dist_m');
-            if ($resposta->ok() && is_numeric($dist)) {
-                return response()->json(['dist_m' => round(max(0, (float) $dist), 2), 'fonte' => 'ia']);
+            $classe = $resposta->json('classe');
+            if ($resposta->ok() && in_array($classe, Proximidade::CLASSES, true)) {
+                return [
+                    'classe' => $classe,
+                    // fonte 'regra' quando a própria API caiu na regra (longe demais do treino)
+                    'fonte'  => $resposta->json('fonte') === 'regra' ? 'regra' : 'ia',
+                    'dist_m' => round((float) $resposta->json('dist_m'), 2),
+                ];
             }
 
-            Log::warning('IA respondeu sem dist_m', ['status' => $resposta->status()]);
+            Log::warning('IA respondeu sem classe válida', ['status' => $resposta->status()]);
         } catch (\Throwable $e) {
             Log::warning('IA fora do ar: ' . $e->getMessage());
         }
 
         Cache::put('ia_fora_do_ar', true, self::PAUSA_APOS_FALHA_S);
 
-        return response()->json($gps);
+        return null;
     }
 
     /** mesmo agrupamento do analisar.py (coluna dispositivo_curto) */
