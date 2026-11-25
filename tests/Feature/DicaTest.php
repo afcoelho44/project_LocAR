@@ -77,15 +77,18 @@ class DicaTest extends TestCase
     public function test_com_ia_usa_a_resposta_da_ia(): void
     {
         config(['services.ia.url' => 'http://ia:5000', 'services.ia.modo' => 'ia']);
-        Http::fake(['ia:5000/classificar' => Http::response(['classe' => 'frio', 'fonte' => 'ia', 'dist_m' => 3.0])]);
-        [$aluno, $p] = $this->cenario();
+        Http::fake(['ia:5000/classificar' => Http::response($this->respostaIa('frio', 'quente', 3.0))]);
+        [$aluno, $p, $q] = $this->cenario();
 
         // pela regra seria quente (3 m); a IA diz frio
         $this->dica($aluno, $p, $this->leituras(3))->assertOk()->assertJson(['classe' => 'frio', 'fonte' => 'ia']);
 
         Http::assertSent(fn ($r) => $r['objeto']['lat'] == self::LAT && count($r['leituras']) === 5
-            && $r['dispositivo'] === 'outro');
-        $this->assertSame('ia', Dica::sole()->fonte);
+            && $r['dispositivo'] === 'outro' && $r['sessao'] === "p{$p->id}-q{$q->id}" && $r['filtro'] === 'kalman');
+        $d = Dica::sole();
+        $this->assertSame(['ia', 'kalman'], [$d->fonte, $d->filtro]);
+        $this->assertEqualsWithDelta(3.4, $d->dist_bruto_m, 0.01);
+        $this->assertEqualsWithDelta(3.0, $d->dist_kalman_m, 0.01);
     }
 
     public function test_ia_fora_do_ar_cai_na_regra_e_pausa(): void
@@ -108,7 +111,7 @@ class DicaTest extends TestCase
     public function test_modo_alternar_divide_as_etapas(): void
     {
         config(['services.ia.url' => 'http://ia:5000', 'services.ia.modo' => 'alternar']);
-        Http::fake(['ia:5000/classificar' => Http::response(['classe' => 'quente', 'fonte' => 'ia', 'dist_m' => 1.0])]);
+        Http::fake(['ia:5000/classificar' => Http::response($this->respostaIa('quente', 'quente', 1.0))]);
         [$aluno, $p, $q] = $this->cenario();
 
         $this->dica($aluno, $p, $this->leituras(1))->assertOk();
@@ -125,14 +128,39 @@ class DicaTest extends TestCase
         $this->assertNotSame($esperado, Dica::latest('id')->first()->braco);
     }
 
-    public function test_modo_regra_nao_chama_a_ia(): void
+    public function test_modo_regra_usa_a_distancia_filtrada_da_api(): void
     {
+        // a API é chamada também na regra: guarda o histórico do Kalman e devolve classe_regra
         config(['services.ia.url' => 'http://ia:5000', 'services.ia.modo' => 'regra']);
-        Http::fake();
+        Http::fake(['ia:5000/classificar' => Http::response($this->respostaIa('frio', 'morno', 12.0))]);
         [$aluno, $p] = $this->cenario();
 
-        $this->dica($aluno, $p, $this->leituras(5))->assertOk()->assertJson(['classe' => 'quente', 'fonte' => 'regra']);
-        Http::assertNothingSent();
+        // bruto daria quente (5 m); filtrado (12 m) dá morno; a classe da IA é ignorada
+        $this->dica($aluno, $p, $this->leituras(5))->assertOk()->assertJson(['classe' => 'morno', 'fonte' => 'regra']);
+        $d = Dica::sole();
+        $this->assertSame(['regra', 'regra', 'kalman'], [$d->braco, $d->fonte, $d->filtro]);
+        $this->assertEqualsWithDelta(12.0, $d->dist_m, 0.01);
+    }
+
+    public function test_sem_ia_registra_filtro_bruto(): void
+    {
+        config(['services.ia.url' => null]);
+        [$aluno, $p] = $this->cenario();
+
+        $this->dica($aluno, $p, $this->leituras(8))->assertOk();
+        $d = Dica::sole();
+        $this->assertSame('bruto', $d->filtro);
+        $this->assertEqualsWithDelta(8, $d->dist_bruto_m, 0.1);
+        $this->assertNull($d->dist_kalman_m);
+    }
+
+    private function respostaIa(string $classe, string $classeRegra, float $distKalman): array
+    {
+        return [
+            'classe' => $classe, 'classe_regra' => $classeRegra, 'fonte' => 'ia', 'filtro' => 'kalman',
+            'dist_m' => $distKalman, 'dist_bruto_m' => $distKalman + 0.4, 'dist_kalman_m' => $distKalman,
+            'probabilidades' => ['quente' => 0.3, 'morno' => 0.3, 'frio' => 0.4], 'leituras_sessao' => 5,
+        ];
     }
 
     public function test_validacao_e_dono(): void

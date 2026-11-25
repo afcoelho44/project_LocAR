@@ -16,11 +16,16 @@ use Illuminate\Support\Facades\Log;
  * O celular manda as últimas leituras do GPS; a coordenada do objeto vem do banco
  * (etapa atual da participação). Quem classifica depende de IA_MODO:
  *   - ia       : componente de IA (API Flask, repo componente_IA)
- *   - regra    : só a regra de distância (App\Support\Proximidade)
+ *   - regra    : só a regra de distância (com a distância filtrada pela API, se IA_URL estiver definida)
  *   - alternar : metade das etapas com a IA e metade com a regra, alternando a ordem
  *                entre participantes (para comparar as duas no teste piloto)
  * Se a IA não estiver configurada, falhar ou demorar, usa a regra (fonte = 'regra')
  * — a dica nunca trava o jogo. Cada dica fica registrada na tabela `dicas`.
+ *
+ * Filtro de Kalman (IA_FILTRO = kalman | bruto): quem filtra é a API, que guarda o histórico
+ * da sessão (participação + etapa). Por isso a API é chamada nas duas etapas (IA e regra):
+ * o filtro não perde leituras e a regra usa a mesma distância que a IA (classe_regra).
+ * Se a API não responder, a regra cai na distância bruta calculada aqui (filtro = 'bruto').
  */
 class DicaController extends Controller
 {
@@ -57,8 +62,19 @@ class DicaController extends Controller
         $braco = $this->braco($participation, (int) $question->position);
 
         $resultado = ['classe' => Proximidade::classe($dist), 'fonte' => 'regra', 'dist_m' => round($dist, 2)];
-        if ($braco === 'ia') {
-            $resultado = $this->perguntarIa($leituras, $question, $request->userAgent()) ?? $resultado;
+        $extra = ['filtro' => 'bruto', 'dist_bruto_m' => round($dist, 2), 'dist_kalman_m' => null];
+
+        $ia = config('services.ia.url')
+            ? $this->perguntarIa($leituras, $participation, $question, $request->userAgent())
+            : null;
+        if ($ia !== null) {
+            $resultado = [
+                // etapa da regra: os limites na distância filtrada que a própria API calculou
+                'classe' => $braco === 'ia' ? $ia['classe'] : $ia['classe_regra'],
+                'fonte'  => $braco === 'ia' ? $ia['fonte'] : 'regra',
+                'dist_m' => $ia['dist_m'],
+            ];
+            $extra = ['filtro' => $ia['filtro'], 'dist_bruto_m' => $ia['dist_bruto_m'], 'dist_kalman_m' => $ia['dist_kalman_m']];
         }
 
         Dica::create([
@@ -69,6 +85,7 @@ class DicaController extends Controller
             'classe'           => $resultado['classe'],
             'dist_m'           => $resultado['dist_m'],
             'accuracy'         => $ultima['accuracy'],
+            ...$extra,
         ]);
 
         // o braço não vai para o celular: o aluno não sabe se a dica veio da IA ou da regra
@@ -90,8 +107,8 @@ class DicaController extends Controller
         return 'ia';
     }
 
-    /** classe pela IA, ou null se ela estiver fora do ar / responder errado */
-    private function perguntarIa(array $leituras, $question, ?string $userAgent): ?array
+    /** resposta da IA (classe, classe_regra, distâncias), ou null se ela estiver fora do ar / responder errado */
+    private function perguntarIa(array $leituras, Participation $participation, $question, ?string $userAgent): ?array
     {
         if (Cache::has('ia_fora_do_ar')) {
             return null;
@@ -104,15 +121,26 @@ class DicaController extends Controller
                     'objeto'      => ['lat' => (float) $question->lat, 'lng' => (float) $question->lng],
                     'leituras'    => $leituras,
                     'dispositivo' => $this->dispositivo($userAgent),
+                    // histórico do Kalman: uma sessão por participação e etapa
+                    'sessao'      => 'p' . $participation->id . '-q' . $question->id,
+                    'filtro'      => config('services.ia.filtro'),
                 ]);
 
             $classe = $resposta->json('classe');
-            if ($resposta->ok() && in_array($classe, Proximidade::CLASSES, true)) {
+            $classeRegra = $resposta->json('classe_regra');
+            if ($resposta->ok() && in_array($classe, Proximidade::CLASSES, true)
+                && in_array($classeRegra, Proximidade::CLASSES, true)) {
+                $num = fn ($v) => $v === null ? null : round((float) $v, 2);
+
                 return [
-                    'classe' => $classe,
+                    'classe'        => $classe,
+                    'classe_regra'  => $classeRegra,
                     // fonte 'regra' quando a própria API caiu na regra (longe demais do treino)
-                    'fonte'  => $resposta->json('fonte') === 'regra' ? 'regra' : 'ia',
-                    'dist_m' => round((float) $resposta->json('dist_m'), 2),
+                    'fonte'         => $resposta->json('fonte') === 'regra' ? 'regra' : 'ia',
+                    'filtro'        => $resposta->json('filtro') === 'kalman' ? 'kalman' : 'bruto',
+                    'dist_m'        => $num($resposta->json('dist_m')),
+                    'dist_bruto_m'  => $num($resposta->json('dist_bruto_m')),
+                    'dist_kalman_m' => $num($resposta->json('dist_kalman_m')),
                 ];
             }
 

@@ -17,14 +17,15 @@ class ExportDicas extends Command
     {
         $caminho = storage_path('app/' . $this->option('arquivo'));
         $colunas = ['id', 'participation_id', 'user_id', 'question_id', 'position', 'braco', 'fonte',
-                    'classe', 'dist_m', 'accuracy', 'created_at'];
+                    'filtro', 'classe', 'dist_m', 'dist_bruto_m', 'dist_kalman_m', 'accuracy', 'created_at'];
 
         $query = DB::table('dicas')
             ->join('participations', 'participations.id', '=', 'dicas.participation_id')
             ->join('questions', 'questions.id', '=', 'dicas.question_id')
             ->select('dicas.id', 'dicas.participation_id', 'participations.user_id', 'dicas.question_id',
-                     'questions.position', 'dicas.braco', 'dicas.fonte', 'dicas.classe', 'dicas.dist_m',
-                     'dicas.accuracy', 'dicas.created_at')
+                     'questions.position', 'dicas.braco', 'dicas.fonte', 'dicas.filtro', 'dicas.classe',
+                     'dicas.dist_m', 'dicas.dist_bruto_m', 'dicas.dist_kalman_m', 'dicas.accuracy',
+                     'dicas.created_at')
             ->orderBy('dicas.participation_id')
             ->orderBy('dicas.id');
 

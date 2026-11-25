@@ -31,6 +31,7 @@ return [
         'url' => env('IA_URL'),
         'timeout' => (float) env('IA_TIMEOUT', 1.5),   // segundos
         'modo' => env('IA_MODO', 'ia'),                // ia | regra | alternar (metade das etapas com cada)
+        'filtro' => env('IA_FILTRO', 'kalman'),        // bruto | kalman — coordenadas usadas na distância (IA e regra)
     ],
 
     'ses' => [

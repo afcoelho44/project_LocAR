@@ -9,11 +9,14 @@ class Dica extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['participation_id', 'question_id', 'braco', 'fonte', 'classe', 'dist_m', 'accuracy'];
+    protected $fillable = ['participation_id', 'question_id', 'braco', 'fonte', 'filtro', 'classe',
+                           'dist_m', 'dist_bruto_m', 'dist_kalman_m', 'accuracy'];
 
     protected $casts = [
-        'dist_m'   => 'float',
-        'accuracy' => 'float',
+        'dist_m'        => 'float',
+        'dist_bruto_m'  => 'float',
+        'dist_kalman_m' => 'float',
+        'accuracy'      => 'float',
     ];
 
     public function participation() { return $this->belongsTo(Participation::class); }
